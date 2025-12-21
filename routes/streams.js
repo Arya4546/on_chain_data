@@ -208,4 +208,63 @@ router.get("/data", async (req, res) => {
   }
 });
 
+router.get("/previous-score/:wallet", async (req, res) => {
+  try {
+    const wallet = req.params.wallet.toLowerCase();
+    const currentSchemaId = await ensureSchemaId();
+    const publisher = process.env.PUBLISHER_WALLET;
+
+    const allData = await sdk.streams.getAllPublisherDataForSchema(
+      currentSchemaId,
+      publisher
+    );
+
+    if (!allData || !Array.isArray(allData)) {
+      return res.json({
+        wallet,
+        previousScore: null
+      });
+    }
+
+    // collect scores in order
+    const scores = [];
+
+    for (const item of allData) {
+      let player = null;
+      let score = null;
+
+      for (const field of item) {
+        const val = field.value?.value ?? field.value;
+        if (field.name === "player") player = val?.toLowerCase();
+        if (field.name === "score") score = Number(val);
+      }
+
+      if (player === wallet && score !== null) {
+        scores.push(score);
+      }
+    }
+
+    // Need at least 2 scores to get previous
+    if (scores.length < 2) {
+      return res.json({
+        wallet,
+        previousScore: null,
+        message: "No previous score available"
+      });
+    }
+
+    const previousScore = scores[scores.length - 2];
+
+    res.json({
+      wallet,
+      previousScore
+    });
+  } catch (err) {
+    console.error("Previous score error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
 module.exports = router;
