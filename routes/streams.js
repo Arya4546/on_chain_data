@@ -265,6 +265,53 @@ router.get("/previous-score/:wallet", async (req, res) => {
   }
 });
 
+router.get("/all-scores/:wallet", async (req, res) => {
+  try {
+    const wallet = req.params.wallet.toLowerCase();
+    const currentSchemaId = await ensureSchemaId();
+    const publisher = process.env.PUBLISHER_WALLET;
+
+    const allData = await sdk.streams.getAllPublisherDataForSchema(
+      currentSchemaId,
+      publisher
+    );
+
+    if (!allData || !Array.isArray(allData)) {
+      return res.json({
+        wallet,
+        scores: [],
+        totalAttempts: 0
+      });
+    }
+
+    const scores = [];
+
+    for (const item of allData) {
+      let player = null;
+      let score = null;
+
+      for (const field of item) {
+        const val = field.value?.value ?? field.value;
+        if (field.name === "player") player = val?.toLowerCase();
+        if (field.name === "score") score = Number(val);
+      }
+
+      if (player === wallet && score !== null) {
+        scores.push(score);
+      }
+    }
+
+    res.json({
+      wallet,
+      scores,
+      totalAttempts: scores.length
+    });
+  } catch (err) {
+    console.error("All scores error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 
 module.exports = router;
