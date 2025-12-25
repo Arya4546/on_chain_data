@@ -114,44 +114,12 @@ router.get("/schema", async (req, res) => {
 });
 
 router.post("/publish", async (req, res) => {
-  try {
-    const { player, score } = req.body;
-
-    if (!player || score == null) {
-      return res
-        .status(400)
-        .json({ error: "Missing player or score" });
-    }
-
-    // Ensure schemaId is computed before publishing
-    const currentSchemaId = await ensureSchemaId();
-
-    const data = encoder.encodeData([
-      { name: "player", value: player, type: "address" },
-      { name: "score", value: BigInt(score), type: "uint256" },
-    ]);
-
-    // Validate that data was encoded successfully
-    if (!data) {
-      throw new Error("Failed to encode data");
-    }
-
-    const dataStreams = [
-      { id: toHex(`player-${Date.now()}`, { size: 32 }), schemaId: currentSchemaId, data },
-    ];
-
-    const tx = await sdk.streams.set(dataStreams);
-
-    console.log(
-      `Published: ${player} | Score ${score} | Tx ${tx}`
-    );
-
-    res.json({ success: true, txHash: tx });
-  } catch (err) {
-    console.error("Publish error:", err);
-    res.status(500).json({ error: err.message });
-  }
+  return res.status(403).json({
+    error: "Publishing disabled",
+    message: "Score submission is disabled. Leaderboard is read-only."
+  });
 });
+
 
 router.get("/data", async (req, res) => {
   try {
